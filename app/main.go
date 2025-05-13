@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"github.com/codecrafters-io/http-server-starter-go/app/pkg/routing"
 	"net"
 	"os"
 	"strings"
@@ -11,13 +12,51 @@ import (
 var _ = net.Listen
 var _ = os.Exit
 
+func root(conn net.Conn) {
+	fmt.Fprint(conn, "HTTP/1.1 200 OK\r\n\r\n")
+}
+func (s *Server) echo(conn net.Conn) {
+	fmt.Println("reading")
+	resp := s.Read(conn)
+	fmt.Println("hae")
+	parts := strings.Split(resp, " ")
+	if len(parts) < 2 {
+		fmt.Fprint(conn, "HTTP/1.1 400 Bad Request\r\n\r\n")
+		return
+	}
+
+	path := parts[1]
+	prefix := "/echo/"
+
+	if strings.HasPrefix(path, prefix) {
+		echoParam := strings.TrimPrefix(path, prefix)
+
+		response := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length :%d\r\n\r\n%s", len(echoParam), echoParam)
+		fmt.Fprint(conn, response)
+		fmt.Println("Sent back")
+		return
+	}
+
+	fmt.Fprint(conn, "HTTP/1.1 404 Not Found\r\n\r\n")
+}
+
 func main() {
-	s := Server{}
-	s.Start()
+	// Setup Routers
+	router := routing.NewRouterMap()
+	router.AssignHandler("/", root)
+
+	// Setup Server
+	server := Server{
+		router: router,
+	}
+
+	router.AssignHandler("/echo", server.echo)
+	server.Start()
 }
 
 type Server struct {
 	listener net.Listener
+	router   *routing.Router
 }
 
 func (s *Server) Start() {
@@ -25,7 +64,7 @@ func (s *Server) Start() {
 	defer s.Close()
 	for {
 		conn := s.Accept()
-		go handlerConnection(conn)
+		go s.handlerConnection(conn)
 	}
 
 }
@@ -56,21 +95,40 @@ func (s *Server) Close() {
 
 }
 
-func handlerConnection(conn net.Conn) {
+// TODO: make a context struct that takes method, path, headers, body.
+//
+//	and then make all the request funcs use it
+func (s *Server) Read(conn net.Conn) string {
+	fmt.Println("0")
+	reader := bufio.NewReader(conn)
+	var request string
+
+	fmt.Println("1")
+	for {
+		fmt.Println("2")
+
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Printf("Error reading: %v\n", err)
+			os.Exit(1)
+		}
+
+		fmt.Println("3")
+		fmt.Printf("Line: %q\n", line) // Debug output
+		request += line
+
+		fmt.Println("4")
+		if line == "\r\n" || line == "\n" {
+			fmt.Println("break")
+			break // End of headers
+		}
+	}
+
+	return request
+}
+
+func (s *Server) handlerConnection(conn net.Conn) {
 	defer conn.Close()
-	resp, err := bufio.NewReader(conn).ReadString('\n')
-	if err != nil {
-		fmt.Printf("Error reading connect: %v", err)
-		os.Exit(1)
-	}
-
-	requestPath := strings.Split(resp, " ")[1]
-
-	if requestPath == "/" {
-		fmt.Fprintf(conn, "HTTP/1.1 200 OK\r\n\r\n")
-	} else {
-		fmt.Fprintf(conn, "HTTP/1.1 404 Not Found\r\n\r\n")
-	}
-	// response := "HTTP/1.1 200 OK\r\n\r\n"
-	// conn.Write([]byte(response))
+	read := s.Read(conn)
+	s.router.Serve(conn, read)
 }
