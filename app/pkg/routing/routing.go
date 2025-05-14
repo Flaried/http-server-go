@@ -4,13 +4,12 @@ import (
 	"fmt"
 	"net"
 	"strings"
+
+	"github.com/codecrafters-io/http-server-starter-go/app/models"
 )
 
-type Context {
-	
-}
 // The string is the request string
-type HandlerFunc func(net.Conn)
+type HandlerFunc func(net.Conn, *models.Request)
 
 // Router is a dictionary of strings and handler functions
 type Router struct {
@@ -21,11 +20,11 @@ func (r *Router) AssignHandler(path string, handler HandlerFunc) {
 	r.routes[path] = handler
 }
 
-func (r *Router) Serve(conn net.Conn, dataRecieved string) {
-	fullPath := strings.Split(dataRecieved, " ")[1]
+func (r *Router) Serve(conn net.Conn, request *models.Request) {
 	for routePath, routeFunc := range r.routes {
-		if fullPath == routePath || strings.HasPrefix(fullPath, routePath+"/") {
-			routeFunc(conn, &dataRecieved)
+		fmt.Println(request.UrlParts[1], "Route", routePath)
+		if request.UrlParts[1] == strings.Replace(routePath, "/", "", 1) {
+			routeFunc(conn, request)
 			return
 		}
 	}
