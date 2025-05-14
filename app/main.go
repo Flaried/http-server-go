@@ -3,41 +3,36 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/codecrafters-io/http-server-starter-go/app/pkg/routing"
+	"io"
 	"net"
 	"os"
 	"strings"
+
+	"github.com/codecrafters-io/http-server-starter-go/app/models"
+	"github.com/codecrafters-io/http-server-starter-go/app/pkg/routing"
 )
 
 var _ = net.Listen
 var _ = os.Exit
+var REQ_END = "\r\n"
 
-func root(conn net.Conn) {
+func root(conn net.Conn, request *models.Request) {
 	fmt.Fprint(conn, "HTTP/1.1 200 OK\r\n\r\n")
 }
-func (s *Server) echo(conn net.Conn) {
-	fmt.Println("reading")
-	resp := s.Read(conn)
-	fmt.Println("hae")
-	parts := strings.Split(resp, " ")
+
+func (s *Server) echo(conn net.Conn, request *models.Request) {
+	parts := request.UrlParts
+
 	if len(parts) < 2 {
 		fmt.Fprint(conn, "HTTP/1.1 400 Bad Request\r\n\r\n")
 		return
 	}
 
-	path := parts[1]
-	prefix := "/echo/"
+	response := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(parts[2]), parts[2])
+	fmt.Fprint(conn, response)
+	return
 
-	if strings.HasPrefix(path, prefix) {
-		echoParam := strings.TrimPrefix(path, prefix)
-
-		response := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length :%d\r\n\r\n%s", len(echoParam), echoParam)
-		fmt.Fprint(conn, response)
-		fmt.Println("Sent back")
-		return
-	}
-
-	fmt.Fprint(conn, "HTTP/1.1 404 Not Found\r\n\r\n")
+	// fmt.Fprint(conn, "HTTP/1.1 404 Not Found\r\n\r\n")
 }
 
 func main() {
@@ -96,39 +91,58 @@ func (s *Server) Close() {
 }
 
 // TODO: make a context struct that takes method, path, headers, body.
-//
-//	and then make all the request funcs use it
-func (s *Server) Read(conn net.Conn) string {
-	fmt.Println("0")
+func connectionToString(conn net.Conn) string {
 	reader := bufio.NewReader(conn)
-	var request string
+	var builder strings.Builder
 
-	fmt.Println("1")
 	for {
-		fmt.Println("2")
-
 		line, err := reader.ReadString('\n')
 		if err != nil {
-			fmt.Printf("Error reading: %v\n", err)
-			os.Exit(1)
+			if err != io.EOF {
+				break
+			}
+			fmt.Printf("Error reading %v\n", err)
+			break
 		}
 
-		fmt.Println("3")
-		fmt.Printf("Line: %q\n", line) // Debug output
-		request += line
+		builder.WriteString(line)
 
-		fmt.Println("4")
-		if line == "\r\n" || line == "\n" {
-			fmt.Println("break")
-			break // End of headers
+		if strings.Contains(builder.String(), "\r\n\r\n") {
+			break
 		}
 	}
 
+	requestString := builder.String()
+	return requestString
+}
+
+// and then make all the request funcs use it
+func (s *Server) Read(conn net.Conn) models.Request {
+	conn_string := connectionToString(conn)
+	iter := strings.SplitSeq(conn_string, REQ_END)
+
+	var request models.Request
+	for partString := range iter {
+		parts := strings.Split(partString, " ")
+
+		switch strings.ToLower(parts[0]) {
+		case "get":
+
+			request.Method = parts[0]
+			request.URL = parts[1]
+			request.Body = parts[2]
+		default:
+			continue
+			// fmt.Println("hi")
+		}
+	}
+	request.UrlParts = strings.Split(request.URL, "/")
 	return request
+
 }
 
 func (s *Server) handlerConnection(conn net.Conn) {
 	defer conn.Close()
 	read := s.Read(conn)
-	s.router.Serve(conn, read)
+	s.router.Serve(conn, &read)
 }
