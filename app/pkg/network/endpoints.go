@@ -23,3 +23,10 @@ func (s *Server) Echo(conn net.Conn, request *models.Request) {
 	return
 
 }
+
+func (s *Server) UserAgent(conn net.Conn, request *models.Request) {
+	agent := request.Headers["User-Agent"]
+
+	response := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(agent), agent)
+	fmt.Fprint(conn, response)
+}
