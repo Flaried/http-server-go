@@ -86,10 +86,9 @@ func (s *Server) Read(conn net.Conn) models.Request {
 
 	var request models.Request
 	var headers = make(map[string]string)
-	iter := strings.SplitSeq(connString, REQ_END) // strings.Split instead of SplitSeq
-
+	iter := strings.SplitSeq(connString, REQ_END)
 	for partString := range iter {
-		parts := strings.Fields(partString) // Better than Split by space
+		parts := strings.Fields(partString)
 
 		if len(parts) == 0 {
 			continue
@@ -111,7 +110,6 @@ func (s *Server) Read(conn net.Conn) models.Request {
 				key := strings.TrimSpace(headerParts[0])
 				value := strings.TrimSpace(headerParts[1])
 				headers[key] = value
-				fmt.Println(headerParts, "hi")
 			}
 		}
 	}
@@ -125,5 +123,5 @@ func (s *Server) Read(conn net.Conn) models.Request {
 func (s *Server) handlerConnection(conn net.Conn) {
 	defer conn.Close()
 	read := s.Read(conn)
-	s.router.Serve(conn, &read)
+	s.Router.Serve(conn, &read)
 }
