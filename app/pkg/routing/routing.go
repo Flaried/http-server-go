@@ -21,9 +21,11 @@ func (r *Router) AssignHandler(path string, handler HandlerFunc) {
 }
 
 func (r *Router) Serve(conn net.Conn, request *models.Request) {
+	// fmt.Println(r.routes, "routes")
 	for routePath, routeFunc := range r.routes {
-		fmt.Println(request.UrlParts[1], "Route", routePath)
+		// fmt.Println(request.UrlParts[1], "Route", routePath)
 		if request.UrlParts[1] == strings.Replace(routePath, "/", "", 1) {
+			fmt.Println("Running function for", routePath)
 			routeFunc(conn, request)
 			return
 		}
