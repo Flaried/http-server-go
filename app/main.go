@@ -14,7 +14,6 @@ func main() {
 	// Setup Routers
 	router := routing.NewRouterMap()
 	router.AssignHandler("/", network.Root)
-	router.AssignHandler("/user-agent", network.Root)
 
 	// Setup Server
 	server := network.Server{
@@ -22,5 +21,6 @@ func main() {
 	}
 
 	router.AssignHandler("/echo", server.Echo)
+	router.AssignHandler("/user-agent", server.UserAgent)
 	server.Start()
 }
