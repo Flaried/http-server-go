@@ -1,10 +1,12 @@
 package main
 
 import (
-	"github.com/codecrafters-io/http-server-starter-go/app/pkg/network"
-	"github.com/codecrafters-io/http-server-starter-go/app/pkg/routing"
+	"fmt"
 	"net"
 	"os"
+
+	"github.com/codecrafters-io/http-server-starter-go/app/internal/config"
+	"github.com/codecrafters-io/http-server-starter-go/app/internal/server"
 )
 
 var _ = net.Listen
@@ -12,15 +14,21 @@ var _ = os.Exit
 
 func main() {
 	// Setup Routers
-	router := routing.NewRouterMap()
-	router.AssignHandler("/", network.Root)
+	router := server.NewRouterMap()
+	router.AssignHandler("/", server.Root)
 
 	// Setup Server
-	server := network.Server{
+	server := server.Server{
 		Router: router,
 	}
 
 	router.AssignHandler("/echo", server.Echo)
 	router.AssignHandler("/user-agent", server.UserAgent)
-	server.Start()
+	config := config.ServerConfig{
+		Address:  "0.0.0.0:4221",
+		Protocol: "tcp",
+	}
+
+	fmt.Printf("Server Listening %s\n", config.Address)
+	server.Start(config)
 }

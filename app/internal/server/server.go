@@ -1,4 +1,4 @@
-package network
+package server
 
 import (
 	"bufio"
@@ -8,19 +8,19 @@ import (
 	"os"
 	"strings"
 
-	"github.com/codecrafters-io/http-server-starter-go/app/models"
-	"github.com/codecrafters-io/http-server-starter-go/app/pkg/routing"
+	"github.com/codecrafters-io/http-server-starter-go/app/internal/config"
 )
-
-var REQ_END = "\r\n"
 
 type Server struct {
 	Listener net.Listener
-	Router   *routing.Router
+	Router   *Router
+	config   config.ServerConfig
 }
 
-func (s *Server) Start() {
+func (s *Server) Start(config config.ServerConfig) {
+	s.config = config
 	s.Listen()
+
 	defer s.Close()
 	for {
 		conn := s.Accept()
@@ -30,9 +30,9 @@ func (s *Server) Start() {
 }
 
 func (s *Server) Listen() {
-	l, err := net.Listen("tcp", "0.0.0.0:4221")
+	l, err := net.Listen(s.config.Protocol, s.config.Address)
 	if err != nil {
-		fmt.Println("Failed to bind to port 4221")
+		fmt.Printf("Failed to bind to %s err: %v", s.config, err)
 		os.Exit(1)
 	}
 
@@ -71,7 +71,7 @@ func connectionToString(conn net.Conn) string {
 
 		builder.WriteString(line)
 
-		if strings.Contains(builder.String(), "\r\n\r\n") {
+		if strings.Contains(builder.String(), config.MARKER) {
 			break
 		}
 	}
@@ -81,12 +81,12 @@ func connectionToString(conn net.Conn) string {
 }
 
 // and then make all the request funcs use it
-func (s *Server) Read(conn net.Conn) models.Request {
+func (s *Server) Read(conn net.Conn) config.Request {
 	connString := connectionToString(conn)
 
-	var request models.Request
+	var request config.Request
 	var headers = make(map[string]string)
-	iter := strings.SplitSeq(connString, REQ_END)
+	iter := strings.SplitSeq(connString, config.CRLF)
 	for partString := range iter {
 		parts := strings.Fields(partString)
 

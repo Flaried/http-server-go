@@ -1,4 +1,4 @@
-package models
+package config
 
 type Request struct {
 	Method   string

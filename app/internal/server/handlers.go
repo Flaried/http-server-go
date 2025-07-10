@@ -1,15 +1,12 @@
-package routing
+package server
 
-import (
-	"fmt"
-	"net"
-	"strings"
-
-	"github.com/codecrafters-io/http-server-starter-go/app/models"
-)
+import "net"
+import "strings"
+import "fmt"
+import "github.com/codecrafters-io/http-server-starter-go/app/internal/config"
 
 // The string is the request string
-type HandlerFunc func(net.Conn, *models.Request)
+type HandlerFunc func(net.Conn, *config.Request)
 
 // Router is a dictionary of strings and handler functions
 type Router struct {
@@ -20,7 +17,7 @@ func (r *Router) AssignHandler(path string, handler HandlerFunc) {
 	r.routes[path] = handler
 }
 
-func (r *Router) Serve(conn net.Conn, request *models.Request) {
+func (r *Router) Serve(conn net.Conn, request *config.Request) {
 	// fmt.Println(r.routes, "routes")
 	for routePath, routeFunc := range r.routes {
 		// fmt.Println(request.UrlParts[1], "Route", routePath)
@@ -30,7 +27,8 @@ func (r *Router) Serve(conn net.Conn, request *models.Request) {
 			return
 		}
 	}
-	fmt.Fprintf(conn, "HTTP/1.1 404 Not Found\r\n\r\n")
+	fmt.Fprintf(conn, "%s 404 Not Found%s", config.HTTPVersion, config.MARKER)
+
 }
 
 func NewRouterMap() *Router {
