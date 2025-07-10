@@ -5,7 +5,7 @@ import (
 	"net"
 	"os"
 
-	"github.com/codecrafters-io/http-server-starter-go/app/internal/config"
+	"github.com/codecrafters-io/http-server-starter-go/app/internal/constants"
 	"github.com/codecrafters-io/http-server-starter-go/app/internal/server"
 )
 
@@ -24,7 +24,7 @@ func main() {
 
 	router.AssignHandler("/echo", server.Echo)
 	router.AssignHandler("/user-agent", server.UserAgent)
-	config := config.ServerConfig{
+	config := constants.ServerConfig{
 		Address:  "0.0.0.0:4221",
 		Protocol: "tcp",
 	}

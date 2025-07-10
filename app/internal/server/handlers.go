@@ -3,10 +3,10 @@ package server
 import "net"
 import "strings"
 import "fmt"
-import "github.com/codecrafters-io/http-server-starter-go/app/internal/config"
+import "github.com/codecrafters-io/http-server-starter-go/app/internal/constants"
 
 // The string is the request string
-type HandlerFunc func(net.Conn, *config.Request)
+type HandlerFunc func(net.Conn, *constants.Request)
 
 // Router is a dictionary of strings and handler functions
 type Router struct {
@@ -17,7 +17,7 @@ func (r *Router) AssignHandler(path string, handler HandlerFunc) {
 	r.routes[path] = handler
 }
 
-func (r *Router) Serve(conn net.Conn, request *config.Request) {
+func (r *Router) Serve(conn net.Conn, request *constants.Request) {
 	// fmt.Println(r.routes, "routes")
 	for routePath, routeFunc := range r.routes {
 		// fmt.Println(request.UrlParts[1], "Route", routePath)
@@ -27,7 +27,7 @@ func (r *Router) Serve(conn net.Conn, request *config.Request) {
 			return
 		}
 	}
-	fmt.Fprintf(conn, "%s 404 Not Found%s", config.HTTPVersion, config.MARKER)
+	fmt.Fprintf(conn, "%s 404 Not Found%s", constants.HTTPVersion, constants.MARKER)
 
 }
 

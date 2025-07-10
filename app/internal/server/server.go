@@ -8,16 +8,16 @@ import (
 	"os"
 	"strings"
 
-	"github.com/codecrafters-io/http-server-starter-go/app/internal/config"
+	"github.com/codecrafters-io/http-server-starter-go/app/internal/constants"
 )
 
 type Server struct {
 	Listener net.Listener
 	Router   *Router
-	config   config.ServerConfig
+	config   constants.ServerConfig
 }
 
-func (s *Server) Start(config config.ServerConfig) {
+func (s *Server) Start(config constants.ServerConfig) {
 	s.config = config
 	s.Listen()
 
@@ -71,7 +71,7 @@ func connectionToString(conn net.Conn) string {
 
 		builder.WriteString(line)
 
-		if strings.Contains(builder.String(), config.MARKER) {
+		if strings.Contains(builder.String(), constants.MARKER) {
 			break
 		}
 	}
@@ -81,12 +81,12 @@ func connectionToString(conn net.Conn) string {
 }
 
 // and then make all the request funcs use it
-func (s *Server) Read(conn net.Conn) config.Request {
+func (s *Server) Read(conn net.Conn) constants.Request {
 	connString := connectionToString(conn)
 
-	var request config.Request
+	var request constants.Request
 	var headers = make(map[string]string)
-	iter := strings.SplitSeq(connString, config.CRLF)
+	iter := strings.SplitSeq(connString, constants.CRLF)
 	for partString := range iter {
 		parts := strings.Fields(partString)
 

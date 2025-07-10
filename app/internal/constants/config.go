@@ -1,4 +1,4 @@
-package config
+package constants
 
 const (
 	DefaultPort = "4221"
