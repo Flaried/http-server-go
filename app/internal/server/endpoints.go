@@ -3,12 +3,11 @@ package server
 import (
 	"fmt"
 	"net"
-
-	"github.com/codecrafters-io/http-server-starter-go/app/internal/constants"
+	"os"
 )
 
-func Root(conn net.Conn, request *constants.Request) {
-	resp := constants.Response{
+func Root(conn net.Conn, request *Request) {
+	resp := Response{
 		StatusCode: 200,
 		StatusText: "OK",
 		Headers:    map[string]string{},
@@ -17,34 +16,28 @@ func Root(conn net.Conn, request *constants.Request) {
 	_, _ = fmt.Fprint(conn, resp.String())
 }
 
-func (s *Server) Echo(conn net.Conn, request *constants.Request) {
-	parts := request.UrlParts
-	if len(parts) < 3 {
-		resp := constants.Response{
-			StatusCode: 400,
-			StatusText: "Bad Request",
-			Headers:    map[string]string{},
-			Body:       "",
-		}
-		_, _ = fmt.Fprint(conn, resp.String())
+func (s *Server) Echo(conn net.Conn, request *Request) {
+	queryParameter, badResponse := s.GetQueryParam(request)
+	if badResponse != nil {
+		fmt.Fprint(conn, badResponse.String())
 		return
 	}
 
-	resp := constants.Response{
+	resp := Response{
 		StatusCode: 200,
 		StatusText: "OK",
 		Headers: map[string]string{
 			"Content-Type": "text/plain",
 		},
-		Body: parts[2],
+		Body: queryParameter,
 	}
 	_, _ = fmt.Fprint(conn, resp.String())
 }
 
-func (s *Server) UserAgent(conn net.Conn, request *constants.Request) {
+func (s *Server) UserAgent(conn net.Conn, request *Request) {
 	agent := request.Headers["User-Agent"]
 
-	resp := constants.Response{
+	resp := Response{
 		StatusCode: 200,
 		StatusText: "OK",
 		Headers: map[string]string{
@@ -53,4 +46,43 @@ func (s *Server) UserAgent(conn net.Conn, request *constants.Request) {
 		Body: agent,
 	}
 	_, _ = fmt.Fprint(conn, resp.String())
+}
+
+func (s *Server) ReturnFile(conn net.Conn, request *Request) {
+	queryParameter, badResponse := s.GetQueryParam(request)
+	if badResponse != nil {
+		fmt.Fprint(conn, badResponse.String())
+		return
+	}
+
+	file_name := queryParameter
+
+	filePath := fmt.Sprintf("%s%s", *s.ServingDirectory, file_name)
+	fmt.Println(filePath)
+	bytes, err := os.ReadFile(filePath)
+
+	if err != nil {
+		resp := Response{
+			StatusCode: 404,
+			StatusText: "Not Found",
+			Headers:    map[string]string{},
+			Body:       "",
+		}
+
+		_, _ = fmt.Fprint(conn, resp.String())
+		return
+	}
+
+	resp := Response{
+		StatusCode: 200,
+		StatusText: "OK",
+		Headers: map[string]string{
+			"Content-Type": "application/octet-stream",
+		},
+		Body: string(bytes),
+	}
+
+	_, _ = fmt.Fprint(conn, resp.String())
+	// buf := make([]byte, 1024)
+
 }
