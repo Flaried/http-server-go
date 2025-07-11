@@ -3,18 +3,18 @@ package server
 import (
 	"bufio"
 	"fmt"
+	"github.com/codecrafters-io/http-server-starter-go/app/internal/constants"
 	"io"
 	"net"
 	"os"
 	"strings"
-
-	"github.com/codecrafters-io/http-server-starter-go/app/internal/constants"
 )
 
 type Server struct {
-	Listener net.Listener
-	Router   *Router
-	config   constants.ServerConfig
+	Listener         net.Listener
+	Router           *Router
+	config           constants.ServerConfig
+	ServingDirectory *string
 }
 
 func (s *Server) Start(config constants.ServerConfig) {
@@ -81,12 +81,12 @@ func connectionToString(conn net.Conn) string {
 }
 
 // and then make all the request funcs use it
-func (s *Server) Read(conn net.Conn) constants.Request {
+func (s *Server) Read(conn net.Conn) Request {
 	connString := connectionToString(conn)
-
-	var request constants.Request
+	var request Request
 	var headers = make(map[string]string)
 	iter := strings.SplitSeq(connString, constants.CRLF)
+
 	for partString := range iter {
 		parts := strings.Fields(partString)
 
@@ -115,7 +115,7 @@ func (s *Server) Read(conn net.Conn) constants.Request {
 	}
 
 	request.Headers = headers
-	request.UrlParts = strings.Split(request.URL, "/")
+	request.Path = strings.Split(request.URL, "/")
 	return request
 
 }
