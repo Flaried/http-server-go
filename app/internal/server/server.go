@@ -2,12 +2,14 @@ package server
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
-	"github.com/codecrafters-io/http-server-starter-go/app/internal/constants"
 	"io"
 	"net"
 	"os"
 	"strings"
+
+	"github.com/codecrafters-io/http-server-starter-go/app/internal/constants"
 )
 
 type Server struct {
@@ -47,6 +49,7 @@ func (s *Server) Accept() net.Conn {
 	}
 	return conn
 }
+
 func (s *Server) Close() {
 	err := s.Listener.Close()
 	if err != nil {
@@ -81,47 +84,53 @@ func connectionToString(conn net.Conn) string {
 }
 
 // and then make all the request funcs use it
-func (s *Server) Read(conn net.Conn) Request {
-	connString := connectionToString(conn)
+func (s *Server) Read(conn net.Conn) (Request, error) {
 	var request Request
-	var headers = make(map[string]string)
-	iter := strings.SplitSeq(connString, constants.CRLF)
+	reader := bufio.NewReader(conn)
 
-	for partString := range iter {
-		parts := strings.Fields(partString)
+	requestLine, err := reader.ReadString('\n')
+	if err != nil {
+		return request, err
+	}
+	requestParts := strings.Fields(requestLine)
+	if len(requestParts) < 3 {
+		return request, errors.New("bad request")
+	}
 
-		if len(parts) == 0 {
-			continue
+	headers := make(map[string]string)
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil || line == "\r\n" {
+			break
 		}
-
-		switch strings.ToLower(parts[0]) {
-		case "get":
-			if len(parts) >= 3 {
-				request.Method = parts[0]
-				request.URL = parts[1]
-				request.Body = parts[2]
-			} else if len(parts) == 2 {
-				request.Method = parts[0]
-				request.URL = parts[1]
-			}
-		default:
-			headerParts := strings.SplitN(partString, ":", 2)
-			if len(headerParts) == 2 {
-				key := strings.TrimSpace(headerParts[0])
-				value := strings.TrimSpace(headerParts[1])
-				headers[key] = value
-			}
+		headerParts := strings.SplitN(line, ":", 2)
+		if len(headerParts) == 2 {
+			key := strings.TrimSpace(strings.ToLower(headerParts[0]))
+			value := strings.TrimSpace(headerParts[1])
+			headers[key] = value
 		}
 	}
 
 	request.Headers = headers
-	request.Path = strings.Split(request.URL, "/")
-	return request
+	request.Method = requestParts[0]
+	request.Path = strings.Split(requestParts[1], "/")
+	return request, nil
 
 }
 
 func (s *Server) handlerConnection(conn net.Conn) {
+	// Recover from panic
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered from panic in connection handler:", r)
+
+		}
+	}()
+
 	defer conn.Close()
-	read := s.Read(conn)
-	s.Router.Serve(conn, &read)
+
+	request, err := s.Read(conn)
+	if err == nil {
+		s.Router.Serve(conn, &request)
+	}
 }
