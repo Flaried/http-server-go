@@ -2,10 +2,10 @@ package server
 
 import (
 	"fmt"
-	"net"
-
 	"github.com/codecrafters-io/http-server-starter-go/app/internal/models"
 	"github.com/codecrafters-io/http-server-starter-go/app/internal/router"
+	"net"
+	"strings"
 )
 
 type Server struct {
@@ -68,10 +68,19 @@ func (s Server) handleConnection(conn net.Conn) {
 
 	defer conn.Close()
 
-	req, err := models.ParseRequest(conn)
-	if err != nil {
-		return
-	}
+	// Loop to handle multiple requests on same connection
+	for {
+		req, err := models.ParseRequest(conn)
+		if err != nil {
+			return
+		}
 
-	s.router.Serve(conn, req)
+		// Check if client wants to close connection
+		if strings.ToLower(req.Headers["connection"]) == "close" {
+			s.router.Serve(conn, req)
+			return
+		}
+
+		s.router.Serve(conn, req)
+	}
 }
