@@ -39,6 +39,12 @@ func OkStatus(req *Request, body []byte, contentType string) Response {
 		respHeaders["content-encoding"] = "gzip"
 	}
 
+	// Check for closing headers
+	connectionHeader := strings.ToLower(req.Headers["connection"])
+	if strings.Contains(connectionHeader, "close") {
+		respHeaders["Connection"] = "close"
+	}
+
 	respHeaders["Content-Type"] = contentType
 
 	return Response{
