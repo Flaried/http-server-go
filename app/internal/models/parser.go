@@ -2,7 +2,10 @@ package models
 
 import (
 	"bufio"
+	"bytes"
+	"compress/gzip"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"strconv"
@@ -61,7 +64,6 @@ func ParseRequest(conn net.Conn) (Request, error) {
 
 		req.Body = body
 	}
-
 	return req, nil
 }
 
@@ -71,4 +73,17 @@ func QueryParam(request Request) string {
 		return ""
 	}
 	return path[2]
+}
+func Gzip(body []byte) []byte {
+	fmt.Println("in gzip")
+	var b bytes.Buffer
+	writer := gzip.NewWriter(&b)
+	defer writer.Close()
+
+	_, err := writer.Write([]byte(body))
+	if err != nil {
+		return []byte("")
+	}
+
+	return b.Bytes()
 }
