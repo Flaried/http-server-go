@@ -1,13 +1,8 @@
 package server
 
 import (
-	"bufio"
-	"errors"
 	"fmt"
-	"io"
 	"net"
-	"strconv"
-	"strings"
 
 	"github.com/codecrafters-io/http-server-starter-go/app/internal/models"
 	"github.com/codecrafters-io/http-server-starter-go/app/internal/router"
@@ -30,7 +25,7 @@ func (s *Server) SetRouter(r *router.Router) {
 	s.router = r
 }
 
-func (s *Server) Start() error {
+func (s Server) Start() error {
 	if err := s.listen(); err != nil {
 		return err
 	}
@@ -64,7 +59,7 @@ func (s *Server) Close() {
 	}
 }
 
-func (s *Server) handleConnection(conn net.Conn) {
+func (s Server) handleConnection(conn net.Conn) {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("Recovered from panic:", r)
@@ -73,66 +68,10 @@ func (s *Server) handleConnection(conn net.Conn) {
 
 	defer conn.Close()
 
-	req, err := s.parseRequest(conn)
+	req, err := models.ParseRequest(conn)
 	if err != nil {
 		return
 	}
 
 	s.router.Serve(conn, req)
-}
-
-func (s *Server) parseRequest(conn net.Conn) (models.Request, error) {
-	var req models.Request
-	reader := bufio.NewReader(conn)
-
-	// Parse request line
-	requestLine, err := reader.ReadString('\n')
-	if err != nil {
-		return req, err
-	}
-
-	parts := strings.Fields(requestLine)
-	if len(parts) < 3 {
-		return req, errors.New("invalid request line")
-	}
-
-	req.Method = parts[0]
-	req.URL = parts[1]
-	req.Path = strings.Split(parts[1], "/")
-
-	// Parse headers
-	headers := make(map[string]string)
-	for {
-		line, err := reader.ReadString('\n')
-		if err != nil || line == "\r\n" {
-			break
-		}
-
-		headerParts := strings.SplitN(line, ":", 2)
-		if len(headerParts) == 2 {
-			key := strings.TrimSpace(strings.ToLower(headerParts[0]))
-			value := strings.TrimSpace(headerParts[1])
-			headers[key] = value
-		}
-	}
-
-	req.Headers = headers
-
-	// Parse body if present
-	if lengthStr := headers["content-length"]; lengthStr != "" {
-		contentLength, err := strconv.Atoi(lengthStr)
-		if err != nil {
-			return req, err
-		}
-
-		body := make([]byte, contentLength)
-		_, err = io.ReadFull(reader, body)
-		if err != nil {
-			return req, err
-		}
-
-		req.Body = body
-	}
-
-	return req, nil
 }
