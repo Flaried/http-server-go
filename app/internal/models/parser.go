@@ -65,7 +65,7 @@ func ParseRequest(conn net.Conn) (Request, error) {
 	return req, nil
 }
 
-func GetQueryParam(request Request) string {
+func QueryParam(request Request) string {
 	path := request.Path
 	if len(path) < 3 {
 		return ""
