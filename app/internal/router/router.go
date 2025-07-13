@@ -41,12 +41,7 @@ func (r *Router) Serve(conn net.Conn, req models.Request) {
 	}
 
 	// 404 Not Found
-	resp := models.Response{
-		StatusCode: 404,
-		StatusText: "Not Found",
-		Headers:    map[string]string{},
-		Body:       nil,
-	}
+	resp := models.NotFound()
 	fmt.Fprint(conn, resp.String())
 }
 
