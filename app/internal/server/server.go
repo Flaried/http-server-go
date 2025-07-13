@@ -6,103 +6,108 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"os"
+	"strconv"
 	"strings"
 
-	"github.com/codecrafters-io/http-server-starter-go/app/internal/constants"
+	"github.com/codecrafters-io/http-server-starter-go/app/internal/models"
+	"github.com/codecrafters-io/http-server-starter-go/app/internal/router"
 )
 
 type Server struct {
-	Listener         net.Listener
-	Router           *Router
-	config           constants.ServerConfig
-	ServingDirectory *string
+	listener net.Listener
+	router   *router.Router
+	config   models.ServerConfig
 }
 
-func (s *Server) Start(config constants.ServerConfig) {
-	s.config = config
-	s.Listen()
+func NewServer(config models.ServerConfig) *Server {
+	return &Server{
+		config: config,
+		router: router.NewRouter(),
+	}
+}
+
+func (s *Server) SetRouter(r *router.Router) {
+	s.router = r
+}
+
+func (s *Server) Start() error {
+	if err := s.listen(); err != nil {
+		return err
+	}
 
 	defer s.Close()
-	for {
-		conn := s.Accept()
-		go s.handlerConnection(conn)
-	}
 
+	for {
+		conn, err := s.listener.Accept()
+		if err != nil {
+			fmt.Println("Error accepting connection:", err)
+			continue
+		}
+
+		go s.handleConnection(conn)
+	}
 }
 
-func (s *Server) Listen() {
+func (s *Server) listen() error {
 	l, err := net.Listen(s.config.Protocol, s.config.Address)
 	if err != nil {
-		fmt.Printf("Failed to bind to %s err: %v", s.config, err)
-		os.Exit(1)
+		return fmt.Errorf("failed to bind to %s: %w", s.config.Address, err)
 	}
 
-	s.Listener = l
-}
-
-func (s *Server) Accept() net.Conn {
-	conn, err := s.Listener.Accept()
-	if err != nil {
-		fmt.Println("Error accepting connection: ", err.Error())
-		os.Exit(1)
-	}
-	return conn
+	s.listener = l
+	return nil
 }
 
 func (s *Server) Close() {
-	err := s.Listener.Close()
+	if s.listener != nil {
+		s.listener.Close()
+	}
+}
+
+func (s *Server) handleConnection(conn net.Conn) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered from panic:", r)
+		}
+	}()
+
+	defer conn.Close()
+
+	req, err := s.parseRequest(conn)
 	if err != nil {
-		fmt.Println("Failed to close listener:", err.Error())
+		return
 	}
 
+	s.router.Serve(conn, req)
 }
 
-func connectionToString(conn net.Conn) string {
-	reader := bufio.NewReader(conn)
-	var builder strings.Builder
-
-	for {
-		line, err := reader.ReadString('\n')
-		if err != nil {
-			if err != io.EOF {
-				break
-			}
-			fmt.Printf("Error reading %v\n", err)
-			break
-		}
-
-		builder.WriteString(line)
-
-		if strings.Contains(builder.String(), constants.MARKER) {
-			break
-		}
-	}
-
-	requestString := builder.String()
-	return requestString
-}
-
-// and then make all the request funcs use it
-func (s *Server) Read(conn net.Conn) (Request, error) {
-	var request Request
+func (s *Server) parseRequest(conn net.Conn) (models.Request, error) {
+	var req models.Request
 	reader := bufio.NewReader(conn)
 
+	// Parse request line
 	requestLine, err := reader.ReadString('\n')
 	if err != nil {
-		return request, err
-	}
-	requestParts := strings.Fields(requestLine)
-	if len(requestParts) < 3 {
-		return request, errors.New("bad request")
+		return req, err
 	}
 
+	parts := strings.Fields(requestLine)
+	if len(parts) < 3 {
+		return req, errors.New("invalid request line")
+	}
+
+	req.Method = parts[0]
+	req.URL = parts[1]
+	req.Path = strings.Split(parts[1], "/")
+
+	// Parse headers
 	headers := make(map[string]string)
 	for {
 		line, err := reader.ReadString('\n')
 		if err != nil || line == "\r\n" {
 			break
 		}
+
 		headerParts := strings.SplitN(line, ":", 2)
 		if len(headerParts) == 2 {
 			key := strings.TrimSpace(strings.ToLower(headerParts[0]))
@@ -111,26 +116,23 @@ func (s *Server) Read(conn net.Conn) (Request, error) {
 		}
 	}
 
-	request.Headers = headers
-	request.Method = requestParts[0]
-	request.Path = strings.Split(requestParts[1], "/")
-	return request, nil
+	req.Headers = headers
 
-}
-
-func (s *Server) handlerConnection(conn net.Conn) {
-	// Recover from panic
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Println("Recovered from panic in connection handler:", r)
-
+	// Parse body if present
+	if lengthStr := headers["content-length"]; lengthStr != "" {
+		contentLength, err := strconv.Atoi(lengthStr)
+		if err != nil {
+			return req, err
 		}
-	}()
 
-	defer conn.Close()
+		body := make([]byte, contentLength)
+		_, err = io.ReadFull(reader, body)
+		if err != nil {
+			return req, err
+		}
 
-	request, err := s.Read(conn)
-	if err == nil {
-		s.Router.Serve(conn, &request)
+		req.Body = body
 	}
+
+	return req, nil
 }
