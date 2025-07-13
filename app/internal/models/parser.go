@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"errors"
-	"fmt"
 	"io"
 	"net"
 	"strconv"
@@ -74,16 +73,17 @@ func QueryParam(request Request) string {
 	}
 	return path[2]
 }
+
 func Gzip(body []byte) []byte {
-	fmt.Println("in gzip")
 	var b bytes.Buffer
 	writer := gzip.NewWriter(&b)
 	defer writer.Close()
 
-	_, err := writer.Write([]byte(body))
+	_, err := writer.Write(body)
 	if err != nil {
 		return []byte("")
 	}
 
+	writer.Close()
 	return b.Bytes()
 }
