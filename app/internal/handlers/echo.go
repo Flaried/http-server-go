@@ -6,6 +6,7 @@ import (
 	"net"
 )
 
+// Endpoints that returns the Query Params. Returns bad request to the client if theres no param.
 func Echo(conn net.Conn, req models.Request) {
 	fmt.Println("echo")
 	// Extract path parameter

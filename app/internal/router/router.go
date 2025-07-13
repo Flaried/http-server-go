@@ -23,15 +23,18 @@ func NewRouter() *Router {
 	}
 }
 
-func (r *Router) Register(method, path string, handler handlers.Handler) {
+// helper func to map the handlerfunc with the path and method
+func (r *Router) register(method, path string, handler handlers.Handler) {
 	key := RouteKey{Method: method, Path: path}
 	r.routes[key] = handler
 }
 
+// RegisterFunc is a helper to register a HandlerFunc directly as a route.
 func (r *Router) RegisterFunc(method, path string, handlerFunc handlers.HandlerFunc) {
-	r.Register(method, path, handlerFunc)
+	r.register(method, path, handlerFunc)
 }
 
+// Serve routes the given request to the appropriate handler or returns a 404 response.
 func (r *Router) Serve(conn net.Conn, req models.Request) {
 	for routeKey, handler := range r.routes {
 		if r.matchRoute(routeKey, req) {
@@ -45,6 +48,7 @@ func (r *Router) Serve(conn net.Conn, req models.Request) {
 	fmt.Fprint(conn, resp.String())
 }
 
+// helper func that checks whether the given request matches a registered route.
 func (r *Router) matchRoute(routeKey RouteKey, req models.Request) bool {
 	if req.Method != routeKey.Method {
 		return false

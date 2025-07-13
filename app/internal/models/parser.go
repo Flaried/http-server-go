@@ -11,6 +11,11 @@ import (
 	"strings"
 )
 
+/*
+ParseRequest reads and parses an HTTP request from the given connection.
+It returns a Request struct with method, URL, path segments, headers, and optional body.
+An error is returned if the request line is invalid or if reading the body fails.
+*/
 func ParseRequest(conn net.Conn) (Request, error) {
 	var req Request
 	reader := bufio.NewReader(conn)
@@ -66,6 +71,8 @@ func ParseRequest(conn net.Conn) (Request, error) {
 	return req, nil
 }
 
+// QueryParam extracts the third segment of the request path, if present.
+// Returns an empty string if the path has fewer than 3 segments.
 func QueryParam(request Request) string {
 	path := request.Path
 	if len(path) < 3 {
@@ -74,6 +81,8 @@ func QueryParam(request Request) string {
 	return path[2]
 }
 
+// Gzip compresses the given byte slice using gzip and returns the compressed data.
+// If compression fails, an empty byte slice is returned.
 func Gzip(body []byte) []byte {
 	var b bytes.Buffer
 	writer := gzip.NewWriter(&b)

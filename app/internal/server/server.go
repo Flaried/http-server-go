@@ -59,6 +59,7 @@ func (s *Server) Close() {
 	}
 }
 
+// main logic for incoming requests on a single client connection.
 func (s Server) handleConnection(conn net.Conn) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -77,6 +78,7 @@ func (s Server) handleConnection(conn net.Conn) {
 
 		// Check if client wants to close connection
 		if strings.ToLower(req.Headers["connection"]) == "close" {
+			fmt.Println("close.")
 			s.router.Serve(conn, req)
 			return
 		}

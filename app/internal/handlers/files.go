@@ -7,14 +7,17 @@ import (
 	"os"
 )
 
+// The type to determine where to get the files
 type FileHandler struct {
 	ServingDirectory string
 }
 
+// Makes a new file handler with the directory to fetch from
 func NewFileHandler(servingDir string) *FileHandler {
 	return &FileHandler{ServingDirectory: servingDir}
 }
 
+// When the file API is GET the file to get is the QueryParam
 func (h FileHandler) HandleGet(conn net.Conn, req models.Request) {
 	if len(req.Path) < 3 {
 		resp := models.BadRequest()
@@ -44,6 +47,7 @@ func (h FileHandler) HandleGet(conn net.Conn, req models.Request) {
 	fmt.Fprint(conn, resp.String())
 }
 
+// When the file API is POST the filename is the queryparam and the file data is the request data
 func (h FileHandler) HandlePost(conn net.Conn, req models.Request) {
 	if len(req.Body) == 0 {
 		resp := models.BadRequest()
