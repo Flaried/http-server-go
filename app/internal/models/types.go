@@ -15,6 +15,7 @@ type Response struct {
 	StatusText string
 	Headers    map[string]string
 	Body       string
+	Params     *string
 }
 
 func (r Response) String() string {
