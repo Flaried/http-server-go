@@ -8,7 +8,8 @@ import (
 
 func Echo(conn net.Conn, req models.Request) {
 	// Extract path parameter
-	if len(req.Path) < 3 {
+	param := models.QueryParam(req)
+	if param != "" {
 		resp := models.Response{
 			StatusCode: 400,
 			StatusText: "Bad Request",
