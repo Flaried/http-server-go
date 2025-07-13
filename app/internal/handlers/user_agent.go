@@ -9,13 +9,6 @@ import (
 func UserAgent(conn net.Conn, req models.Request) {
 	agent := req.Headers["user-agent"]
 
-	resp := models.Response{
-		StatusCode: 200,
-		StatusText: "OK",
-		Headers: map[string]string{
-			"Content-Type": "text/plain",
-		},
-		Body: agent,
-	}
+	resp := models.OkStatus(&req, []byte(agent), "text/plain")
 	fmt.Fprint(conn, resp.String())
 }

@@ -17,12 +17,7 @@ func NewFileHandler(servingDir string) *FileHandler {
 
 func (h FileHandler) HandleGet(conn net.Conn, req models.Request) {
 	if len(req.Path) < 3 {
-		resp := models.Response{
-			StatusCode: 400,
-			StatusText: "Bad Request",
-			Headers:    map[string]string{},
-			Body:       "",
-		}
+		resp := models.BadRequest()
 		fmt.Fprint(conn, resp.String())
 		return
 	}
@@ -32,12 +27,7 @@ func (h FileHandler) HandleGet(conn net.Conn, req models.Request) {
 	if param != "" {
 		filename = param
 	} else {
-		resp := models.Response{
-			StatusCode: 404,
-			StatusText: "Not Found",
-			Headers:    map[string]string{},
-			Body:       "",
-		}
+		resp := models.NotFound()
 		fmt.Fprint(conn, resp.String())
 		return
 	}
@@ -45,35 +35,18 @@ func (h FileHandler) HandleGet(conn net.Conn, req models.Request) {
 	filePath := fmt.Sprintf("%s%s", h.ServingDirectory, filename)
 	bytes, err := os.ReadFile(filePath)
 	if err != nil {
-		resp := models.Response{
-			StatusCode: 404,
-			StatusText: "Not Found",
-			Headers:    map[string]string{},
-			Body:       "",
-		}
+		resp := models.NotFound()
 		fmt.Fprint(conn, resp.String())
 		return
 	}
 
-	resp := models.Response{
-		StatusCode: 200,
-		StatusText: "OK",
-		Headers: map[string]string{
-			"Content-Type": "application/octet-stream",
-		},
-		Body: string(bytes),
-	}
+	resp := models.OkStatus(&req, bytes, "application/octet-stream")
 	fmt.Fprint(conn, resp.String())
 }
 
 func (h FileHandler) HandlePost(conn net.Conn, req models.Request) {
 	if len(req.Body) == 0 {
-		resp := models.Response{
-			StatusCode: 400,
-			StatusText: "Bad Request",
-			Headers:    map[string]string{},
-			Body:       "",
-		}
+		resp := models.BadRequest()
 		fmt.Fprint(conn, resp.String())
 		return
 	}
@@ -84,12 +57,7 @@ func (h FileHandler) HandlePost(conn net.Conn, req models.Request) {
 	if param != "" {
 		filename = param
 	} else {
-		resp := models.Response{
-			StatusCode: 404,
-			StatusText: "Not Found",
-			Headers:    map[string]string{},
-			Body:       "",
-		}
+		resp := models.NotFound()
 		fmt.Fprint(conn, resp.String())
 		return
 	}
@@ -98,12 +66,7 @@ func (h FileHandler) HandlePost(conn net.Conn, req models.Request) {
 	fmt.Println(filePath, "hee")
 	err := os.WriteFile(filePath, req.Body, 0644)
 	if err != nil {
-		resp := models.Response{
-			StatusCode: 500,
-			StatusText: "Internal Server Error",
-			Headers:    map[string]string{},
-			Body:       "",
-		}
+		resp := models.InternalServerError()
 		fmt.Fprint(conn, resp.String())
 		return
 	} else {
@@ -114,7 +77,7 @@ func (h FileHandler) HandlePost(conn net.Conn, req models.Request) {
 		StatusCode: 201,
 		StatusText: "Created",
 		Headers:    map[string]string{},
-		Body:       "",
+		Body:       nil,
 	}
 	fmt.Fprint(conn, resp.String())
 }

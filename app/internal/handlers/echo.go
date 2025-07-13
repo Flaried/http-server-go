@@ -7,27 +7,17 @@ import (
 )
 
 func Echo(conn net.Conn, req models.Request) {
+	fmt.Println("echo")
 	// Extract path parameter
 	param := models.QueryParam(req)
-	if param != "" {
-		resp := models.Response{
-			StatusCode: 400,
-			StatusText: "Bad Request",
-			Headers:    map[string]string{},
-			Body:       "",
-		}
+	if param == "" {
+		resp := models.BadRequest()
 		fmt.Fprint(conn, resp.String())
 		return
 	}
 
 	echoText := req.Path[2]
-	resp := models.Response{
-		StatusCode: 200,
-		StatusText: "OK",
-		Headers: map[string]string{
-			"Content-Type": "text/plain",
-		},
-		Body: echoText,
-	}
+	resp := models.OkStatus(&req, []byte(echoText), "text/plain")
+
 	fmt.Fprint(conn, resp.String())
 }
