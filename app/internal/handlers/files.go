@@ -15,7 +15,7 @@ func NewFileHandler(servingDir string) *FileHandler {
 	return &FileHandler{ServingDirectory: servingDir}
 }
 
-func (h *FileHandler) HandleGet(conn net.Conn, req models.Request) {
+func (h FileHandler) HandleGet(conn net.Conn, req models.Request) {
 	if len(req.Path) < 3 {
 		resp := models.Response{
 			StatusCode: 400,
@@ -27,9 +27,22 @@ func (h *FileHandler) HandleGet(conn net.Conn, req models.Request) {
 		return
 	}
 
-	filename := req.Path[2]
-	filePath := fmt.Sprintf("%s%s", h.ServingDirectory, filename)
+	var filename string
+	param := models.QueryParam(req)
+	if param != "" {
+		filename = param
+	} else {
+		resp := models.Response{
+			StatusCode: 404,
+			StatusText: "Not Found",
+			Headers:    map[string]string{},
+			Body:       "",
+		}
+		fmt.Fprint(conn, resp.String())
+		return
+	}
 
+	filePath := fmt.Sprintf("%s%s", h.ServingDirectory, filename)
 	bytes, err := os.ReadFile(filePath)
 	if err != nil {
 		resp := models.Response{
@@ -53,7 +66,7 @@ func (h *FileHandler) HandleGet(conn net.Conn, req models.Request) {
 	fmt.Fprint(conn, resp.String())
 }
 
-func (h *FileHandler) HandlePost(conn net.Conn, req models.Request) {
+func (h FileHandler) HandlePost(conn net.Conn, req models.Request) {
 	if len(req.Body) == 0 {
 		resp := models.Response{
 			StatusCode: 400,
@@ -65,10 +78,25 @@ func (h *FileHandler) HandlePost(conn net.Conn, req models.Request) {
 		return
 	}
 
-	filePath := fmt.Sprintf("%s%s", h.ServingDirectory, string(req.Body))
-	data := []byte("hello\ngo\n")
+	fmt.Println(string(req.Body))
+	var filename string
+	param := models.QueryParam(req)
+	if param != "" {
+		filename = param
+	} else {
+		resp := models.Response{
+			StatusCode: 404,
+			StatusText: "Not Found",
+			Headers:    map[string]string{},
+			Body:       "",
+		}
+		fmt.Fprint(conn, resp.String())
+		return
+	}
 
-	err := os.WriteFile(filePath, data, 0644)
+	filePath := fmt.Sprintf("%s%s", h.ServingDirectory, filename)
+	fmt.Println(filePath, "hee")
+	err := os.WriteFile(filePath, req.Body, 0644)
 	if err != nil {
 		resp := models.Response{
 			StatusCode: 500,
@@ -78,6 +106,8 @@ func (h *FileHandler) HandlePost(conn net.Conn, req models.Request) {
 		}
 		fmt.Fprint(conn, resp.String())
 		return
+	} else {
+		fmt.Printf("Saved file in %s\n", filePath)
 	}
 
 	resp := models.Response{
