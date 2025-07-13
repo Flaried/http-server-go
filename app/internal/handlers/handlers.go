@@ -5,7 +5,6 @@ import (
 	"net"
 )
 
-// Handler interface - now owned by handlers package
 type Handler interface {
 	Handle(conn net.Conn, req models.Request)
 }

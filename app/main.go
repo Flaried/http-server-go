@@ -25,7 +25,6 @@ func main() {
 
 	path = flag.String("directory", ".", "Directory to serve files from")
 	flag.Parse()
-
 	fileHandler := handlers.NewFileHandler(*path)
 
 	// Root Path
