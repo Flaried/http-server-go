@@ -3,41 +3,53 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/codecrafters-io/http-server-starter-go/app/internal/constants"
+	"github.com/codecrafters-io/http-server-starter-go/app/internal/handlers"
+	"github.com/codecrafters-io/http-server-starter-go/app/internal/models"
+	"github.com/codecrafters-io/http-server-starter-go/app/internal/router"
 	"github.com/codecrafters-io/http-server-starter-go/app/internal/server"
 	"net"
 	"os"
 )
 
-var _ = net.Listen
-var _ = os.Exit
 var path *string
 
 func main() {
-	path = flag.String("directory", ".", "Directory to serve files from")
-	flag.Parse()
-
-	fmt.Println("Serving files from directory:", *path)
-
-	// Setup Routers
-
-	router := server.NewRouterMap()
-	router.AssignHandler("/", server.Root)
-
-	// Setup Server
-	server := server.Server{
-		Router:           router,
-		ServingDirectory: path,
-	}
-
-	router.AssignHandler("/echo", server.Echo)
-	router.AssignHandler("/user-agent", server.UserAgent)
-	config := constants.ServerConfig{
+	config := models.ServerConfig{
 		Address:  "0.0.0.0:4221",
 		Protocol: "tcp",
 	}
 
-	router.AssignHandler("/files", server.ReturnFile)
-	fmt.Printf("Server Listening %s\n", config.Address)
-	server.Start(config)
+	server := server.NewServer(config)
+
+	r := router.NewRouter()
+
+	path = flag.String("directory", ".", "Directory to serve files from")
+	flag.Parse()
+
+	fileHandler := handlers.NewFileHandler(*path)
+
+	// Root Path
+	r.RegisterFunc("GET", "/", func(conn net.Conn, req models.Request) {
+		resp := models.Response{
+			StatusCode: 200,
+			StatusText: "OK",
+			Headers:    map[string]string{},
+			Body:       "",
+		}
+		fmt.Fprint(conn, resp.String())
+	})
+
+	// Routes
+	r.RegisterFunc("GET", "/echo", handlers.Echo)
+	r.RegisterFunc("GET", "/user-agent", handlers.UserAgent)
+	r.RegisterFunc("GET", "/files", handlers.HandlerFunc(fileHandler.HandleGet))
+	r.RegisterFunc("POST", "/files", handlers.HandlerFunc(fileHandler.HandlePost))
+
+	// Set router and start server
+	server.SetRouter(r)
+	fmt.Println("Server starting on", config.Address)
+	if err := server.Start(); err != nil {
+		fmt.Printf("Server failed to start: %v\n", err)
+		os.Exit(1)
+	}
 }
