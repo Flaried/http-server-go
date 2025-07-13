@@ -45,7 +45,7 @@ func (r *Router) Serve(conn net.Conn, req models.Request) {
 		StatusCode: 404,
 		StatusText: "Not Found",
 		Headers:    map[string]string{},
-		Body:       "",
+		Body:       nil,
 	}
 	fmt.Fprint(conn, resp.String())
 }

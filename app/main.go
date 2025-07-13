@@ -33,7 +33,7 @@ func main() {
 			StatusCode: 200,
 			StatusText: "OK",
 			Headers:    map[string]string{},
-			Body:       "",
+			Body:       nil,
 		}
 		fmt.Fprint(conn, resp.String())
 	})
