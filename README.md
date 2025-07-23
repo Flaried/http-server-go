@@ -1,7 +1,7 @@
 # HTTP/1.1 Server Implementation in Go
 A fully-featured HTTP/1.1 server built from using standard libraries in Golang, implementing core web server functionality without external frameworks.
 
-[![progress-banner](https://app.codecrafters.io/courses/http-server/overview)
+https://app.codecrafters.io/courses/http-server/overview
 
 
 
